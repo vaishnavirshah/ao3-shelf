@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cozy AO3 Shelf</title>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Dark, moody firelit library palette */
+            --bg-color: #16100c;
+            --sidebar-bg: #1c130d;
+            --text-main: #e8dcca;
+            --text-light: #a39171;
+            --accent: #d46a29; /* Firelight orange */
+            --accent-hover: #e88241;
+            --shelf-wood: #2a180e;
+            --shelf-shadow: #0a0502;
+            --input-bg: #110c08;
+            --input-border: #3d2b1f;
+            --card-bg: #140e0a;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex; height: 100vh; overflow: hidden;
+        }
+
+        .app-container { display: flex; width: 100%; max-width: 1400px; margin: 0 auto; z-index: 10; position: relative; }
+
+        .sidebar {
+            width: 350px; background: var(--sidebar-bg); padding: 2.5rem;
+            box-shadow: 4px 0 25px rgba(0,0,0,0.8); display: flex;
+            flex-direction: column; gap: 2rem; z-index: 20;
+            border-right: 1px solid var(--input-border);
+            overflow-y: auto;
+        }
+
+        h1 { font-family: 'Merriweather', serif; font-size: 2rem; margin: 0; line-height: 1.2; color: #f4e8d4; }
+        .subtitle { font-size: 0.9rem; color: var(--text-light); margin-top: 0.5rem; }
+
+        .add-section { display: flex; flex-direction: column; gap: 0.8rem; }
+        
+        .add-section input {
+            padding: 12px 15px; border: 2px solid var(--input-border); border-radius: 8px;
+            font-family: 'Nunito', sans-serif; font-size: 1rem; background: var(--input-bg); 
+            color: var(--text-main); outline: none; transition: border-color 0.3s;
+            width: 100%; box-sizing: border-box; margin-bottom: 0.2rem;
+        }
+        .add-section input::placeholder { color: #5a4634; }
+        .add-section input:focus { border-color: var(--accent); box-shadow: 0 0 8px rgba(212, 106, 41, 0.2); }
+
+        button {
+            padding: 12px; background-color: var(--accent); color: #fff; border: none;
+            border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5); box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+        button:hover { background-color: var(--accent-hover); }
+        button:disabled { background-color: #555; color: #888; cursor: not-allowed; box-shadow: none; }
+
+        #status-msg { font-size: 0.85rem; color: var(--accent-hover); min-height: 20px; font-style: italic; }
+
+        /* Inline Manual Form */
+        .manual-form { flex-direction: column; gap: 0.5rem; display: none; }
+        .manual-divider { height: 1px; background: var(--input-border); margin: 0.5rem 0; }
+
+        .stats-container { display: flex; flex-direction: column; gap: 1rem; margin-top: auto; }
+        .stat-card {
+            background: var(--card-bg); padding: 1.2rem; border-radius: 12px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.05);
+            text-align: center; border: 1px solid var(--input-border);
+        }
+        .stat-card h3 { margin: 0; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-light); }
+        .stat-card .value { font-family: 'Merriweather', serif; font-size: 2rem; font-weight: bold; color: var(--accent); margin: 0.5rem 0 0 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+
+        /* Dynamic Fireplace Background for Library */
+        .library-wrapper {
+            flex: 1; position: relative; overflow: hidden;
+            background: radial-gradient(circle at 50% 120%, rgba(212, 90, 20, 0.25) 0%, rgba(15, 10, 8, 1) 60%);
+            animation: fireFlicker 3s infinite alternate ease-in-out;
+        }
+
+        @keyframes fireFlicker {
+            0% { background: radial-gradient(circle at 50% 120%, rgba(212, 90, 20, 0.22) 0%, rgba(15, 10, 8, 1) 65%); }
+            100% { background: radial-gradient(circle at 50% 120%, rgba(220, 110, 30, 0.28) 0%, rgba(15, 10, 8, 1) 55%); }
+        }
+
+        /* Floating Embers */
+        .ember {
+            position: absolute; bottom: -10px; width: 4px; height: 4px;
+            background: #ffaa00; border-radius: 50%;
+            box-shadow: 0 0 10px 3px rgba(255, 100, 0, 0.8);
+            animation: floatUp linear forwards; pointer-events: none; z-index: 1;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1) translateX(0); opacity: 1; }
+            50% { transform: translateY(-150px) scale(0.8) translateX(20px); opacity: 0.8; }
+            100% { transform: translateY(-300px) scale(0) translateX(-20px); opacity: 0; }
+        }
+
+        .library { 
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            padding: 3rem; overflow-y: auto; display: flex; flex-direction: column; gap: 4rem; z-index: 10; 
+        }
+        
+        .shelf {
+            display: flex; flex-wrap: wrap; gap: 20px; padding: 0 20px 15px 20px;
+            border-bottom: 25px solid var(--shelf-wood); border-radius: 2px; position: relative;
+            min-height: 220px; align-items: flex-end;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.6);
+        }
+        .shelf::after {
+            content: ''; position: absolute; bottom: -35px; left: -10px; right: -10px;
+            height: 10px; background-color: var(--shelf-shadow); border-radius: 0 0 4px 4px;
+        }
+
+        /* Realistic Hardcover Books */
+        .book {
+            width: 135px; border-radius: 2px 8px 8px 2px; position: relative; cursor: pointer;
+            box-shadow: 
+                inset 5px 0 8px rgba(0,0,0,0.5), 
+                inset -2px 0 3px rgba(255,255,255,0.1), 
+                8px 5px 15px rgba(0,0,0,0.7); 
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            padding: 20px 10px 10px 20px; 
+            border-left: 3px solid rgba(0,0,0,0.4); 
+            overflow: hidden;
+            text-align: center;
+        }
+        
+        .book::before {
+            content: ''; position: absolute; top: 0; bottom: 0; left: 10px; width: 4px;
+            background: linear-gradient(to right, rgba(0,0,0,0.4), rgba(255,255,255,0.1) 50%, rgba(0,0,0,0.4));
+        }
+
+        .book::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+            pointer-events: none; mix-blend-mode: overlay;
+        }
+
+        .book:hover { transform: translateY(-15px) scale(1.05); z-index: 15; }
+
+        .cover-title {
+            font-family: 'Merriweather', serif; font-size: 0.85rem; font-weight: 700;
+            color: #dcb871; 
+            text-shadow: -1px -1px 0 rgba(0,0,0,0.4), 1px 1px 1px rgba(255,255,255,0.2);
+            margin: 0; line-height: 1.3;
+            display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+            position: relative; z-index: 2;
+        }
+
+        .cover-author {
+            font-family: 'Nunito', sans-serif; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px;
+            color: #b5924d; margin-top: 10px;
+            text-shadow: -1px -1px 0 rgba(0,0,0,0.4);
+            position: relative; z-index: 2;
+        }
+
+        .cover-divider {
+            width: 30px; height: 1px; background: #dcb871; margin: 8px 0; opacity: 0.5; position: relative; z-index: 2;
+        }
+
+        /* Delete Button */
+        .delete-btn {
+            position: absolute; top: -10px; right: -10px; width: 26px; height: 26px;
+            background-color: #8b2222; color: #fff; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 16px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            border: 2px solid var(--bg-color); opacity: 0; transform: scale(0.8);
+            transition: all 0.2s ease; z-index: 30; user-select: none;
+        }
+        .book:hover .delete-btn { opacity: 1; transform: scale(1); }
+        .delete-btn:hover { background-color: #b32d2d; transform: scale(1.1) !important; }
+
+        .book-info {
+            position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+            background: rgba(20, 14, 10, 0.98); color: white; padding: 12px 15px; border-radius: 6px;
+            width: 220px; text-align: center; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+            font-size: 0.85rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 40;
+            border: 1px solid var(--input-border);
+        }
+        .book-info::after {
+            content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+            border-width: 6px; border-style: solid; border-color: rgba(20, 14, 10, 0.98) transparent transparent transparent;
+        }
+        .book:hover .book-info { opacity: 1; }
+        .book-info strong { display: block; font-family: 'Merriweather', serif; font-size: 1rem; margin-bottom: 5px; color: #f4e8d4; }
+        .book-info .author { color: var(--accent); margin-bottom: 5px; display: block; }
+        .book-info .wordcount { color: #887864; font-size: 0.75rem; }
+
+        .empty-state { color: var(--text-light); font-family: 'Merriweather', serif; font-style: italic; position: absolute; bottom: 30px; left: 30px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="sidebar">
+            <div>
+                <h1>My AO3 Shelf</h1>
+                <div class="subtitle">A cozy corner for your favorite reads</div>
+            </div>
+
+            <div class="add-section">
+                <input type="url" id="ao3-url" placeholder="Paste AO3 link here...">
+                <button id="add-btn" onclick="addFic()">Add to Shelf</button>
+                <div id="status-msg"></div>
+                
+                <!-- Inline Manual Entry Form -->
+                <div class="manual-form" id="manual-form">
+                    <div class="manual-divider"></div>
+                    <p style="font-size: 0.85rem; margin: 0 0 0.5rem 0; color: var(--text-light);">Enter details manually:</p>
+                    <input type="text" id="manual-title" placeholder="Book Title (Required)">
+                    <input type="text" id="manual-author" placeholder="Author (Optional)">
+                    <input type="number" id="manual-words" placeholder="Word Count (Optional)">
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                        <button onclick="saveManualFic()" style="flex: 1;">Save Book</button>
+                        <button onclick="hideManualForm()" style="flex: 1; background-color: transparent; border: 1px solid var(--input-border); color: var(--text-light); box-shadow: none;">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-container">
+                <div class="stat-card">
+                    <h3>Fics Read</h3>
+                    <p class="value" id="stat-count">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Words Read</h3>
+                    <p class="value" id="stat-words">0</p>
+                </div>
+                <div class="stat-card" title="Based on 80,000 words per standard adult novel">
+                    <h3>Standard Books Equiv.</h3>
+                    <p class="value" id="stat-equiv">0</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="library-wrapper">
+            <div class="library" id="library"></div>
+        </div>
+    </div>
+
+    <script>
+        function createEmbers() {
+            const container = document.querySelector('.library-wrapper');
+            setInterval(() => {
+                const ember = document.createElement('div');
+                ember.className = 'ember';
+                ember.style.left = Math.random() * 100 + '%';
+                ember.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                ember.style.opacity = Math.random();
+                container.appendChild(ember);
+                setTimeout(() => ember.remove(), 5000);
+            }, 400); 
+        }
+        createEmbers();
+
+        let myLibrary = JSON.parse(localStorage.getItem('cozyAo3Shelf')) || [];
+        updateUI();
+
+        async function addFic() {
+            const urlInput = document.getElementById('ao3-url');
+            let url = urlInput.value.trim();
+            const statusMsg = document.getElementById('status-msg');
+            const btn = document.getElementById('add-btn');
+
+            if (!url) {
+                // If they just clicked add without a URL, open the manual form immediately
+                document.getElementById('manual-form').style.display = 'flex';
+                return;
+            }
+
+            statusMsg.style.color = "var(--text-light)";
+            statusMsg.innerText = "Dusting off the cover... (Fetching stats)";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`/api/fetch?url=${encodeURIComponent(url)}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || "SERVER_ERROR");
+                }
+
+                saveBook(data.title, data.author, data.words, url);
+
+            } catch (error) {
+                console.warn("Auto-fetch failed:", error.message);
+                btn.disabled = false;
+                
+                if (error.message === "LOCKED_FIC") {
+                    statusMsg.style.color = "#d46a29";
+                    statusMsg.innerText = "This fic is locked to registered users only! Please add it manually below.";
+                } else if (error.message === "INVALID_LINK") {
+                    statusMsg.style.color = "#d46a29";
+                    statusMsg.innerText = "Oops! Couldn't find a story at that link. You can add it manually.";
+                } else {
+                    statusMsg.style.color = "var(--accent)";
+                    statusMsg.innerText = "Server couldn't fetch it. Please enter details below!";
+                }
+                
+                // Show the inline manual form instead of pop-ups
+                document.getElementById('manual-form').style.display = 'flex';
+            } 
+        }
+
+        function saveManualFic() {
+            const title = document.getElementById('manual-title').value.trim();
+            const author = document.getElementById('manual-author').value.trim() || 'Anonymous';
+            const words = parseInt(document.getElementById('manual-words').value) || 0;
+            const url = document.getElementById('ao3-url').value.trim();
+
+            if (!title) {
+                document.getElementById('status-msg').style.color = "#d46a29";
+                document.getElementById('status-msg').innerText = "Book Title is required!";
+                return;
+            }
+
+            saveBook(title, author, words, url);
+        }
+
+        function hideManualForm() {
+            document.getElementById('manual-form').style.display = 'none';
+            document.getElementById('manual-title').value = '';
+            document.getElementById('manual-author').value = '';
+            document.getElementById('manual-words').value = '';
+            document.getElementById('status-msg').innerText = '';
+        }
+
+        function saveBook(title, author, words, url) {
+            const urlInput = document.getElementById('ao3-url');
+            const statusMsg = document.getElementById('status-msg');
+            const btn = document.getElementById('add-btn');
+
+            const newBook = {
+                id: Date.now(), title: title, author: author, words: words, url: url,
+                coverSeed: Math.random().toString(36).substring(7)
+            };
+
+            myLibrary.push(newBook);
+            localStorage.setItem('cozyAo3Shelf', JSON.stringify(myLibrary));
+
+            urlInput.value = '';
+            statusMsg.style.color = "#6a9955";
+            statusMsg.innerText = "Added to your shelf!";
+            updateUI();
+            
+            btn.disabled = false;
+            hideManualForm();
+            setTimeout(() => { if(statusMsg.innerText.includes('Added')) statusMsg.innerText = ''; }, 3000);
+        }
+
+        function removeBook(id, event) {
+            event.stopPropagation();
+            const btn = event.target;
+            
+            // Pop-up free confirmation: First click turns the button into a warning
+            if (btn.innerText === '×') {
+                btn.innerText = '?';
+                btn.style.backgroundColor = '#d46a29';
+                btn.title = "Click again to confirm deletion";
+                
+                // Reset the button if they don't click it again within 3 seconds
+                setTimeout(() => {
+                    if (btn.innerText === '?') {
+                        btn.innerText = '×';
+                        btn.style.backgroundColor = '#8b2222';
+                        btn.title = "Remove book";
+                    }
+                }, 3000);
+            } 
+            // Second click actually deletes the book
+            else if (btn.innerText === '?') {
+                myLibrary = myLibrary.filter(book => book.id !== id);
+                localStorage.setItem('cozyAo3Shelf', JSON.stringify(myLibrary));
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            const totalFics = myLibrary.length;
+            const totalWords = myLibrary.reduce((sum, book) => sum + book.words, 0);
+            const bookEquiv = (totalWords / 80000).toFixed(1);
+
+            document.getElementById('stat-count').innerText = totalFics;
+            document.getElementById('stat-words').innerText = totalWords.toLocaleString();
+            document.getElementById('stat-equiv').innerText = bookEquiv;
+
+            const libraryContainer = document.getElementById('library');
+            libraryContainer.innerHTML = '';
+
+            if (totalFics === 0) {
+                const emptyShelf = document.createElement('div');
+                emptyShelf.className = 'shelf';
+                emptyShelf.innerHTML = `<div class="empty-state">Your shelf is waiting for its first story...</div>`;
+                libraryContainer.appendChild(emptyShelf);
+                return;
+            }
+
+            const hardcoverColors = ['#4A2C2A', '#2C3A35', '#2A3244', '#3E2A35', '#1D1C1A', '#3D2E20', '#422416'];
+
+            const booksPerShelf = 8; 
+            for (let i = 0; i < myLibrary.length; i += booksPerShelf) {
+                const shelfBooks = myLibrary.slice(i, i + booksPerShelf);
+                const shelfDiv = document.createElement('div');
+                shelfDiv.className = 'shelf';
+
+                shelfBooks.forEach(book => {
+                    const bookDiv = document.createElement('div');
+                    bookDiv.className = 'book';
+                    
+                    const colorIndex = book.words % hardcoverColors.length;
+                    bookDiv.style.backgroundColor = hardcoverColors[colorIndex];
+                    
+                    const heightOffset = (book.words % 20); 
+                    bookDiv.style.height = `${170 + heightOffset}px`;
+                    bookDiv.onclick = () => window.open(book.url, '_blank');
+
+                    let shortTitle = book.title;
+                    if(shortTitle.length > 40) shortTitle = shortTitle.substring(0, 37) + '...';
+
+                    bookDiv.innerHTML = `
+                        <div class="delete-btn" onclick="removeBook(${book.id}, event)" title="Remove book">×</div>
+                        
+                        <div class="cover-title">${shortTitle}</div>
+                        <div class="cover-divider"></div>
+                        <div class="cover-author">${book.author}</div>
+                        
+                        <div class="book-info">
+                            <strong>${book.title}</strong>
+                            <span class="author">by ${book.author}</span>
+                            <span class="wordcount">${book.words.toLocaleString()} words</span>
+                        </div>
+                    `;
+                    shelfDiv.appendChild(bookDiv);
+                });
+                libraryContainer.appendChild(shelfDiv);
+            }
+        }
+    </script>
+</body>
+</html>
